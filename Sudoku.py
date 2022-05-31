@@ -1,8 +1,11 @@
 from tkinter import *
+from time import time
 
 class Board:
     sets = []
     root = None
+    rabbitHoleClock = 0
+    backStep = 5
 
     class Box:
         avail = []
@@ -118,6 +121,7 @@ class Board:
                         bool = False
                 else:
                     box.text.insert(0,str(box.val))
+                    self.root.update_idletasks()
         return bool
 
     def soloCheck(self, box):
@@ -231,7 +235,7 @@ class Board:
                             box.avail[val-1] = False
         return True
 
-    def solver(self):
+    def solver(self, depth):
         if self.display(True):
             return True
         for set in self.sets:
@@ -244,9 +248,9 @@ class Board:
         if self.display(True):
             return True
 
-        return self.solverBox()
+        return self.solverBox(depth)
 
-    def solverBox(self):
+    def solverBox(self, depth):
 
         def mycopy(self, oldList):
             newList = []
@@ -274,16 +278,26 @@ class Board:
                     continue
                 for a in range(len(box.avail)):
                     if box.avail[a]:
-                        if self.found(self.sets[box.set][box.spot],a+1) and self.solver():
+                        if self.found(self.sets[box.set][box.spot],a+1) and self.solver(depth+1):
                             return True
                         else:
                             self.sets = mycopy(self, setCpy)
+                            if self.backStep >= 0 and time() - self.rabbitHoleClock > 2:
+                                if depth > self.backStep:
+                                    return False
+                                else:
+                                    self.rabbitHoleClock = time()
+                                    self.backStep -= 1
+                            elif self.backStep < 0:
+                                self.clear()
+
         return False
 
     def solve(self):
         if not self.retrieve():
             return False
-        self.solver()
+        self.rabbitHoleClock = time()
+        self.solver(0)
         self.display(False)
 
     def __init__(self):
