@@ -78,7 +78,7 @@ class Board:
 
     def find(self, box):
         if box.val == 0:
-            avail = len([x for (x, avail) in zip((x for x in range(self.level)), box.avail) if avail])
+            avail = sum(box.avail)
             if avail == 1:
                 return self.found(box, (box.avail.index(True)))
             elif avail == 0:
