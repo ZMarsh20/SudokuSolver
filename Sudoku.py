@@ -1,11 +1,9 @@
 from tkinter import *
-from time import time
 
 class Board:
     sets = []
+    level = 0
     root = None
-    rabbitHoleClock = 0
-    backStep = 5
 
     class Box:
         avail = []
@@ -24,6 +22,7 @@ class Board:
     def setup(self, level, root):
         self.sets = []
         self.root = root
+        self.level = level
         for widgets in root.winfo_children():
             widgets.destroy()
         root.destroy()
@@ -59,20 +58,18 @@ class Board:
                 box.text.delete(0,END)
 
     def found(self, box, val):
-        if val == 0:
-            self.clean(box)
-            return True
-        for i in range(len(box.avail)):
-            box.avail[i] = False
-        box.val = val
+        if not box.avail[val]:
+            return False
+        box.avail = [False for _ in range(self.level)]
+        box.val = val+1
         for set in self.sets:
             for b in set:
                 if b.row == box.row:
-                    b.avail[val-1] = False
+                    b.avail[val] = False
                 if b.col == box.col:
-                    b.avail[val-1] = False
+                    b.avail[val] = False
                 if b.set == box.set:
-                    b.avail[val-1] = False
+                    b.avail[val] = False
         for set in self.sets:
             for b in set:
                 if not self.find(b):
@@ -80,20 +77,16 @@ class Board:
         return True
 
     def find(self, box):
-        if box.val != 0:
-            return True
-        avail = len(self.sets[0])
-        for poss in box.avail:
-            if not poss:
-                avail -= 1
-        if avail == 1:
-            return self.found(box, (box.avail.index(True) + 1))
-        elif avail == 0:
-            return False
+        if box.val == 0:
+            avail = len([x for (x, avail) in zip((x for x in range(self.level)), box.avail) if avail])
+            if avail == 1:
+                return self.found(box, (box.avail.index(True)))
+            elif avail == 0:
+                return False
         return True
 
     def clean(self, box):
-        for a in range(len(box.avail)):
+        for a in range(self.level):
             box.avail[a] = True
         box.val = 0
 
@@ -105,16 +98,26 @@ class Board:
             for box in set:
                 try:
                     num = int(box.text.get()[0])
-                    if not self.found(box, (num if num <= len(self.sets) else 0)):
+                    if not self.found(box, (num-1 if num <= self.level else 0)):
                         return False
                 except:
                     continue
         return True
 
-    def display(self,check):
+    def display(self,check=False):
         bool = True
         for set in self.sets:
             for box in set:
+
+                # # better looking code but looks worse on the board
+                # if check and box.val == 0:
+                #     return False
+                # else:
+                #     box.text.delete(0,END)
+                #     if box.val != 0:
+                #         box.text.insert(0,str(box.val))
+                #         self.root.update_idletasks()
+
                 box.text.delete(0,END)
                 if box.val == 0:
                     if check:
@@ -125,125 +128,78 @@ class Board:
         return bool
 
     def soloCheck(self, box):
-        if box.val != 0:
-            return True
+        if box.val == 0:
+            lists = []
+            boxSet = set([x for (x, avail) in zip((x for x in range(self.level)), box.avail) if avail])
+            for b in self.sets[box.set]:
+                if b.val == 0 and b != box:
+                    lists.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if avail])
+            if lists:
+                l = list(boxSet.difference(set.union(*[set(avail) for avail in lists])))
 
-        l = []
-        for i in range(len(self.sets)):
-            l.append(i+1)
-
-        for b in self.sets[box.set]:
-            if b.val == 0:
-                if b == box:
-                    continue
-                c = 1
-                for a in b.avail:
-                    if a and c in l:
-                        l.remove(c)
-                    c+=1
-            elif b.val in l:
-                l.remove(b.val)
-        if len(l) == 1:
-            return self.found(box, l[0])
+                if len(l) == 1:
+                    return self.found(box, l[0])
         return True
 
     def lineCheck(self, box):
-        if box.val != 0:
-            return True
+        if box.val == 0:
+            listr = []
+            listc = []
+            boxVals = []
+            for s in self.sets:
+                for b in s:
+                    if b.set != box.set and box.val != 0:
+                        boxVals.append(box.val-1)
+                    elif box.val == 0:
+                        if b.row == box.row:
+                            listr.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if not avail])
+                        elif b.col == box.col:
+                            listc.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if not avail])
 
-        lr = []
-        for i in range(len(self.sets)):
-            lr.append(i+1)
-        lc = lr[:]
 
-        def notPres(b,l):
-            if b.val == 0:
-                c = 1
-                for a in b.avail:
-                    if a and c in l:
-                        l.remove(c)
-                    c+=1
-            elif b.val in l:
-                l.remove(b.val)
-
-        for set in self.sets:
-            for b in set:
-                if b.set == box.set:
-                    if b.val != 0:
-                        try:
-                            lr.remove(b.val)
-                            lc.remove(b.val)
-                        except:
-                            continue
-                elif b.row == box.row:
-                    notPres(b,lr)
-                elif b.col == box.col:
-                    notPres(b,lc)
-
-        for l in lr:
-            for b in self.sets[box.set]:
-                if b.row != box.row and b.val != 0:
-                    b.avail[l-1] = False
-        for l in lc:
-            for b in self.sets[box.set]:
-                if b.col != box.col and b.val != 0:
-                    b.avail[l-1] = False
-
-        return self.find(box)
-
-    def pairCheck(self):
-
-        def countTrue(l):
-            c = 0
-            for bool in l:
-                if bool:
-                    c += 1
-            return c
-
-        for set in self.sets:
-            emptyBox = []
-            for box in set:
-                if box.val == 0:
-                    emptyBox.append(box)
-            if len(emptyBox) == 0:
-                continue
-            uselessVal = len(emptyBox)
-            while len(emptyBox) > 0:
-                check = emptyBox.pop(0)
-                if countTrue(check.avail) == uselessVal:
-                    continue
-
-                l = []
-                for i in range(len(self.sets)):
-                    l.append(i+1)
-
-                for a in range(len(check.avail)):
-                    if check.avail[a]:
-                       continue
-                    l.remove(a+1)
-
-                pairBox = [check]
-                for box in emptyBox:
-                    if box.avail == check.avail:
-                        pairBox.append(box)
-
-                if len(pairBox) == len(l):
-                    for box in set:
-                        if box.val != 0 or box in pairBox:
-                            continue
-                        for val in l:
-                            box.avail[val-1] = False
+            if listr:
+                lr = list(set.intersection(*[set(l) for l in listr],set(boxVals)))
+                for l in lr:
+                    for b in self.sets[box.set]:
+                        if b.row != box.row and b.val == 0:
+                            b.avail[l] = False
+            if listc:
+                lc = list(set.intersection(*[set(l) for l in listc],set(boxVals)))
+                for l in lc:
+                    for b in self.sets[box.set]:
+                        if b.col != box.col and b.val == 0:
+                            b.avail[l] = False
         return True
 
-    def solver(self, depth):
-        if self.display(True):
-            return True
+    def pairCheck(self):
+        for set in self.sets:
+            emptyBox = list(filter(lambda box: box.val == 0, set))
+            if len(emptyBox) != 0:
+                uselessVal = len(emptyBox)
+                while len(emptyBox) > 0:
+                    check = emptyBox.pop(0)
+                    if sum(check.avail) != uselessVal:
+                        l = [x for (x, avail) in zip((x for x in range(self.level)), check.avail) if avail]
+
+                        pairBox = list(filter(lambda box: box.avail == check.avail, emptyBox))
+                        for box in pairBox:
+                            emptyBox.remove(box)
+                        pairBox.append(check)
+
+                        if len(pairBox) == len(l):
+                            for box in set:
+                                if box.val == 0 and box not in pairBox:
+                                    for val in l:
+                                        box.avail[val] = False
+        return True
+
+    def solver(self, depth=0):
         for set in self.sets:
             for box in set:
                 if box.val == 0:
-                    if self.soloCheck(box) and self.lineCheck(box) and self.pairCheck():
-                        continue
-                    else:
+                    if not (self.lineCheck(box) and self.pairCheck() and self.soloCheck(box)):
+                        return False
+                    if not self.find(box):
                         return False
         if self.display(True):
             return True
@@ -252,7 +208,7 @@ class Board:
 
     def solverBox(self, depth):
 
-        def mycopy(self, oldList):
+        def mycopy(self, oldList):                  # needed my own deepcopy() because of tkinter shtuff
             newList = []
             for set in oldList:
                 temp = []
@@ -274,31 +230,20 @@ class Board:
         setCpy = mycopy(self, self.sets)
         for set in setCpy:
             for box in set:
-                if box.val != 0:
-                    continue
-                for a in range(len(box.avail)):
-                    if box.avail[a]:
-                        if self.found(self.sets[box.set][box.spot],a+1) and self.solver(depth+1):
-                            return True
-                        else:
-                            self.sets = mycopy(self, setCpy)
-                            if self.backStep >= 0 and time() - self.rabbitHoleClock > 2:
-                                if depth > self.backStep:
+                if box.val == 0:
+                    for a in range(self.level):
+                        if box.avail[a]:
+                            if self.found(self.sets[box.set][box.spot],a) and self.solver(depth+1):
+                                return True
+                            else:
+                                self.sets = mycopy(self, setCpy)
+                                if depth > 3:
                                     return False
-                                else:
-                                    self.rabbitHoleClock = time()
-                                    self.backStep -= 1
-                            elif self.backStep < 0:
-                                self.clear()
-
-        return False
 
     def solve(self):
-        if not self.retrieve():
-            return False
-        self.rabbitHoleClock = time()
-        self.solver(0)
-        self.display(False)
+        if self.retrieve():
+            self.solver()
+            self.display()
 
     def __init__(self):
         root = Tk()
