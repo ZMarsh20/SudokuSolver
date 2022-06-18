@@ -58,7 +58,7 @@ class Board:
                 box.text.delete(0,END)
 
     def found(self, box, val):
-        if not box.avail[val]:
+        if not box.avail[val] and box.val != val+1:
             return False
         box.avail = [False for _ in range(self.level)]
         box.val = val+1
