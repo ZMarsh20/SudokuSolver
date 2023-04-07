@@ -16,15 +16,13 @@ class Board:
 
         def __init__(self, level):
             self.avail = []
-            for _ in range(level):
-                self.avail.append(True)
+            for _ in range(level): self.avail.append(True)
 
     def setup(self, level, root):
         self.sets = []
         self.root = root
         self.level = level
-        for widgets in root.winfo_children():
-            widgets.destroy()
+        for widgets in root.winfo_children(): widgets.destroy()
         root.destroy()
         root = Tk()
         for i in range(level):
@@ -58,36 +56,28 @@ class Board:
                 box.text.delete(0,END)
 
     def found(self, box, val):
-        if not box.avail[val] and box.val != val+1:
-            return False
+        if not box.avail[val] and box.val != val+1: return False
         box.avail = [False for _ in range(self.level)]
         box.val = val+1
         for set in self.sets:
             for b in set:
-                if b.row == box.row:
-                    b.avail[val] = False
-                if b.col == box.col:
-                    b.avail[val] = False
-                if b.set == box.set:
-                    b.avail[val] = False
+                if b.row == box.row: b.avail[val] = False
+                if b.col == box.col: b.avail[val] = False
+                if b.set == box.set: b.avail[val] = False
         for set in self.sets:
             for b in set:
-                if not self.find(b):
-                    return False
+                if not self.find(b): return False
         return True
 
     def find(self, box):
         if box.val == 0:
             avail = sum(box.avail)
-            if avail == 1:
-                return self.found(box, (box.avail.index(True)))
-            elif avail == 0:
-                return False
+            if avail == 1: return self.found(box, (box.avail.index(True)))
+            elif avail == 0: return False
         return True
 
     def clean(self, box):
-        for a in range(self.level):
-            box.avail[a] = True
+        for a in range(self.level): box.avail[a] = True
         box.val = 0
 
     def retrieve(self):
@@ -98,10 +88,8 @@ class Board:
             for box in set:
                 try:
                     num = int(box.text.get()[0])
-                    if not self.found(box, (num-1 if num <= self.level else 0)):
-                        return False
-                except:
-                    continue
+                    if not self.found(box, (num-1 if num <= self.level else 0)): return False
+                except: continue
         return True
 
     def display(self,check=False):
@@ -120,8 +108,7 @@ class Board:
 
                 box.text.delete(0,END)
                 if box.val == 0:
-                    if check:
-                        bool = False
+                    if check: bool = False
                 else:
                     box.text.insert(0,str(box.val))
                     self.root.update_idletasks()
@@ -136,9 +123,7 @@ class Board:
                     lists.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if avail])
             if lists:
                 l = list(boxSet.difference(set.union(*[set(avail) for avail in lists])))
-
-                if len(l) == 1:
-                    return self.found(box, l[0])
+                if len(l) == 1: return self.found(box, l[0])
         return True
 
     def lineCheck(self, box):
@@ -148,13 +133,10 @@ class Board:
             boxVals = []
             for s in self.sets:
                 for b in s:
-                    if b.set != box.set and box.val != 0:
-                        boxVals.append(box.val-1)
+                    if b.set != box.set and box.val != 0: boxVals.append(box.val-1)
                     elif box.val == 0:
-                        if b.row == box.row:
-                            listr.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if not avail])
-                        elif b.col == box.col:
-                            listc.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if not avail])
+                        if b.row == box.row: listr.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if not avail])
+                        elif b.col == box.col: listc.append([x for (x, avail) in zip((x for x in range(self.level)), b.avail) if not avail])
 
 
             if listr:
@@ -182,8 +164,7 @@ class Board:
                         l = [x for (x, avail) in zip((x for x in range(self.level)), check.avail) if avail]
 
                         pairBox = list(filter(lambda box: box.avail == check.avail, emptyBox))
-                        for box in pairBox:
-                            emptyBox.remove(box)
+                        for box in pairBox: emptyBox.remove(box)
                         pairBox.append(check)
 
                         if len(pairBox) == len(l):
@@ -197,13 +178,9 @@ class Board:
         for set in self.sets:
             for box in set:
                 if box.val == 0:
-                    if not (self.lineCheck(box) and self.pairCheck() and self.soloCheck(box)):
-                        return False
-                    if not self.find(box):
-                        return False
-        if self.display(True):
-            return True
-
+                    if not (self.lineCheck(box) and self.pairCheck() and self.soloCheck(box)): return False
+                    if not self.find(box): return False
+        if self.display(True): return True
         return self.solverBox(depth)
 
     def solverBox(self, depth):
@@ -233,12 +210,9 @@ class Board:
                 if box.val == 0:
                     for a in range(self.level):
                         if box.avail[a]:
-                            if self.found(self.sets[box.set][box.spot],a) and self.solver(depth+1):
-                                return True
-                            else:
-                                self.sets = mycopy(self, setCpy)
-                                if depth > 3:
-                                    return False
+                            if self.found(self.sets[box.set][box.spot],a) and self.solver(depth+1): return True
+                            self.sets = mycopy(self, setCpy)
+                            if depth > 3: return False
 
     def solve(self):
         if self.retrieve():
